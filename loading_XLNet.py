@@ -42,6 +42,12 @@ optimizer = AdamW(optimizer_grouped_parameters,
 '''
 
 
+"""Testing mode: 
+loop over each word of generated summary and replace prediction for w_1 in input for w_1
+Set summary length: i.e. shift in perm_mask
+Mask input
+"""
+
 # load data
 directory = "test/"
 # text consists of articles
