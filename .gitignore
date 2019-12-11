@@ -104,5 +104,11 @@ venv.bak/
 .mypy_cache/
 
 # data files
-cnn/
-dailymail/
+data/
+.idea/
+logs/
+summaries/
+stories/
+testing/
+train.py
+utils.py

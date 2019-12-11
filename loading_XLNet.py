@@ -49,9 +49,9 @@ Mask input
 """
 
 # load data
-directory = "test/"
+directory = "testing/"
 # text consists of articles
-for filename in os.listdir("test/"):
+for filename in os.listdir("testing/"):
     path = os.path.join(directory, filename)
     article = ArticlePrep(path, max_length=128)
 

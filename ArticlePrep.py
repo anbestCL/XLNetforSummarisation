@@ -83,8 +83,8 @@ class ArticlePrep:
 
 
 if __name__ == "__main__":
-    #test path
-    path = "test/0a0a1a0e94aac65f2b50815050dfaccf521dda35.story"
+    #testing path
+    path = "testing/0a0a1a0e94aac65f2b50815050dfaccf521dda35.story"
     test = ArticlePrep(path, max_length=2000)
 
 
