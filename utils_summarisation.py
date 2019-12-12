@@ -99,7 +99,7 @@ def _add_missing_period(line):
 # Encoding and preprocessing
 # --------------------------
 def set_max_seqlen(stories, summaries, tokenizer):
-    stories = [tokenizer.encode(" ".join(story) +"<sep>" + " ".join(summary), add_special_tokens=True) for story, summary in zip(stories, summaries)]
+    stories = [tokenizer.encode( " ".join(summary) + " ".join(story) + "<sep> <cls>") for story, summary in zip(stories, summaries)]
     max_seq_len = len(max(stories, key=len))
     return max_seq_len
 
@@ -152,15 +152,16 @@ def build_attention_mask(seq_len, max_seq_len):
     return mask
 
 
-def pad_target_mapping(sum_lens, case, pad_sum_len, max_seqlen, predict_pos, sum_len):
-    if case == 1:
-        target_mappings = torch.cat(
-            [build_target_mapping(max_seqlen, pad_sum_len=pad_sum_len, sum_len=sum_len) for
-             sum_len in sum_lens], dim=0)
-    if case == 2:
-        target_mappings = torch.zeros((len(sum_lens)))
+def pad_target_mapping(mode, sum_lens, case, pad_sum_len, max_seqlen, predict_pos):
+    if mode == "train":
+        if case == 1:
+            target_mappings = torch.cat(
+                [build_target_mapping(max_seqlen, pad_sum_len=pad_sum_len, sum_len=sum_len) for
+                 sum_len in sum_lens], dim=0)
+        if case == 2:
+            target_mappings = torch.zeros((len(sum_lens)))
 
-    if sum_len is not None:
+    if mode == "eval":
         target_mappings = torch.cat(
             [build_target_mapping(max_seqlen, predict_pos=predict_pos) for
              _ in sum_lens], dim=0)
@@ -168,13 +169,14 @@ def pad_target_mapping(sum_lens, case, pad_sum_len, max_seqlen, predict_pos, sum
     return target_mappings
 
 
-def pad_summaries_ids(summaries_ids, case, pad_sum_len, max_seqlen, sum_len):
-    if case == 1:
-        summaries_ids = torch.cat([pad_summary(summary, pad_sum_len) for summary in summaries_ids], dim=0)
-    if case == 2:
-        summaries_ids = torch.cat([pad_summary(summary, max_seqlen) for summary in summaries_ids], dim=0)
+def pad_summaries_ids(mode, summaries_ids, case, pad_sum_len, max_seqlen, sum_len):
+    if mode == "train":
+        if case == 1:
+            summaries_ids = torch.cat([pad_summary(summary, pad_sum_len) for summary in summaries_ids], dim=0)
+        if case == 2:
+            summaries_ids = torch.cat([pad_summary(summary, max_seqlen) for summary in summaries_ids], dim=0)
 
-    if sum_len is not None:
+    if mode == "eval":
         summaries = torch.zeros((len(summaries_ids), sum_len))
         for i, summary in enumerate(summaries_ids):
             if summary.shape[1] > sum_len:
@@ -195,7 +197,7 @@ def pad_summary(tokens, pad_seqlen):
         tokens = tokens[:pad_seqlen]
     return tokens
 
-def encode_for_summarization(story_lines, summary_lines, story_name, tokenizer, max_seqlen, sum_len = None):
+def encode_for_summarization(mode, story_lines, summary_lines, story_name, tokenizer, max_seqlen, sum_len = None):
     """ Encode the story and summary lines, and join them
     as specified in [1] by using `[SEP] [CLS]` tokens to separate
     sentences.
@@ -210,21 +212,20 @@ def encode_for_summarization(story_lines, summary_lines, story_name, tokenizer, 
     assert tokenizer.mask_token == "<mask>"
 
     # mode : EVAL
-    if sum_len is not None:
+    if mode == "eval":
         summary_mask = " ".join(["<mask>"] * sum_len)
-        summary_mask = tokenizer.encode(summary_mask, add_special_tokens=True)
-        story_token_ids = tokenizer.encode("." + story, add_special_tokens=True)
-        input_ids = summary_mask[:-1] + story_token_ids
-        summary_token_ids = tokenizer.encode(summary, add_special_tokens=True)
+        summary_mask = tokenizer.encode(summary_mask, add_special_tokens=False)
+        story_token_ids = tokenizer.encode(story, add_special_tokens=False)
+        input_ids = summary_mask + story_token_ids + tokenizer.encode("<sep> <cls>")
+        summary_token_ids = tokenizer.encode(summary, add_special_tokens=False)
 
 
     #mode : TRAIN
     else:
-        summary_token_ids = tokenizer.encode(summary, add_special_tokens=True)
+        summary_token_ids = tokenizer.encode(summary, add_special_tokens=False)
         sum_len = len(summary_token_ids)
-        story_token_ids = tokenizer.encode(story, add_special_tokens=True)
-        # summary has CLS token at the end -> remove for training ?
-        input_ids = summary_token_ids[:-1] + story_token_ids
+        story_token_ids = tokenizer.encode(story, add_special_tokens=False)
+        input_ids = summary_token_ids + story_token_ids + tokenizer.encode("<sep> <cls>")
 
 
     def _pad_input(tokens, max_seqlen, tokenizer):

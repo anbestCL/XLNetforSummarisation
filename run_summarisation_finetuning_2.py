@@ -28,6 +28,7 @@ import random
 import sys
 from collections import defaultdict
 import re
+import shutil
 
 from sklearn.model_selection import train_test_split
 import numpy as np
@@ -66,17 +67,17 @@ def train_dev_test_split(dataset):
     def _write_stories_to_set(stories, type):
         dir_cnn = "{}/cnn/stories".format(type)
         dir_dailymail = "{}/dailymail/stories".format(type)
-        if not os.path.exists(dir_cnn):
-            os.makedirs(dir_cnn)
-        if not os.path.exists(dir_dailymail):
-            os.makedirs(dir_dailymail)
+        for dir in (dir_cnn, dir_dailymail):
+            if os.path.exists(dir):
+                shutil.rmtree(dir)
+            os.makedirs(dir)
         for story in stories:
             if "cnn" in story:
                 dir = dir_cnn
             else:
                 dir = dir_dailymail
             story_name = re.search('(stories\/)(.*)', story).group(2)
-            with open("{}/{}".format(dir, story_name), "w") as copy_story_file:
+            with open(os.path.join(dir, story_name), "w") as copy_story_file:
                 with open(story, "r") as story_file:
                     raw_story = story_file.read()
                     copy_story_file.write(raw_story)
@@ -87,7 +88,7 @@ def train_dev_test_split(dataset):
 
 
 
-def collate(data, tokenizer, max_seqlen, case, sum_len=None, predict_pos=None):
+def collate(data, tokenizer, max_seqlen, mode, case=None, sum_len=None, predict_pos=None):
     """ storyname, stories, summaries per article in batch as input """
 
     # remove the files with empty an story/summary
@@ -98,23 +99,18 @@ def collate(data, tokenizer, max_seqlen, case, sum_len=None, predict_pos=None):
     if max_seqlen is None:
         max_seqlen = set_max_seqlen(stories, summaries, tokenizer)
 
-    # sum_len set for eval case
-    input_ids, stories_ids, summaries_ids, sum_lens = zip(*list([encode_for_summarization(story, summary, story_name, tokenizer, max_seqlen, sum_len) for (story_name, story, summary) in zip(story_names, stories, summaries)]))
-
+    input_ids, stories_ids, summaries_ids, sum_lens = zip(*list([encode_for_summarization(mode, story, summary, story_name, tokenizer, max_seqlen, sum_len) for (story_name, story, summary) in zip(story_names, stories, summaries)]))
     pad_sum_len = max(sum_lens)
+    perm_masks = torch.cat([build_perm_mask(sum_len, max_seqlen) for sum_len in sum_lens], dim=0)
+    target_mappings = pad_target_mapping(mode, sum_lens, case, pad_sum_len, max_seqlen, predict_pos)
+    summaries_ids = pad_summaries_ids(mode, summaries_ids, case, pad_sum_len, max_seqlen, sum_len)
 
     attention_masks = torch.cat([build_attention_mask(story.shape[1], max_seqlen)
     for story in stories_ids], dim=0)
 
-    perm_masks = torch.cat([build_perm_mask(sum_len, max_seqlen) for sum_len in sum_lens], dim=0)
-
     input_ids = torch.cat(input_ids, dim=0)
 
-    summaries_ids = pad_summaries_ids(summaries_ids, case, pad_sum_len, max_seqlen, sum_len)
-
-    target_mappings = pad_target_mapping(sum_lens, case, pad_sum_len, max_seqlen, predict_pos, sum_len)
-
-    if sum_len is not None:
+    if mode == "eval":
         return (
             input_ids,
             stories_ids,
@@ -149,7 +145,7 @@ def train(args, model, tokenizer, case):
     train_dataset = load_and_cache_examples("train", tokenizer)
 
     train_sampler = RandomSampler(train_dataset)
-    model_collate_fn = functools.partial(collate, tokenizer=tokenizer, max_seqlen=args.max_seqlen, case=case)
+    model_collate_fn = functools.partial(collate, tokenizer=tokenizer, max_seqlen=args.max_seqlen, mode="train", case=case)
     train_dataloader = DataLoader(
         train_dataset,
         sampler=train_sampler,
@@ -204,7 +200,8 @@ def train(args, model, tokenizer, case):
     train_iterator = trange(args.num_train_epochs, desc="Epoch", disable=True)
 
     global_loss = {'train':0, 'dev':0} #loss
-    best_dev_score = 0.0 # rouge-1 f-score
+    #best_dev_score = 0.0 # rouge-1 f-score
+    best_dev_loss = 50.0
     for _ in train_iterator:
         tr_loss = 0.0
         epoch_iterator = tqdm(train_dataloader, desc="Iteration", disable=True)
@@ -237,7 +234,7 @@ def train(args, model, tokenizer, case):
                 )
 
             loss = outputs[0]
-            print("Case {}: Loss = {}".format(case, loss))
+            logger.info("Case {}: Loss = {}".format(case, loss))
             tr_loss += loss
             loss.backward()
             optimizer.step()
@@ -245,12 +242,13 @@ def train(args, model, tokenizer, case):
         tr_loss /= step
         global_loss['train'] = tr_loss
 
-        curr_dev_loss, curr_rouge_score = evaluate(args, model, tokenizer)
+        #curr_dev_loss, curr_rouge_score = evaluate(args, model, tokenizer)
+        curr_dev_loss = evaluate(args, model, tokenizer)
         global_loss['dev'] = curr_dev_loss
 
-        curr_dev_score = curr_rouge_score['rouge-1']['f']
-        if curr_dev_score > best_dev_score:
-            best_dev_score = curr_dev_score
+        #curr_dev_score = curr_rouge_score['rouge-1']['f']
+        if curr_dev_loss < best_dev_loss:
+            best_dev_loss = curr_dev_loss
             logger.info("Saving model checkpoint to %s", args.output_dir)
 
             # Save a trained model, configuration and tokenizer using `save_pretrained()`.
@@ -261,23 +259,37 @@ def train(args, model, tokenizer, case):
             model_to_save.save_pretrained(args.output_dir)
             torch.save(args, os.path.join(args.output_dir, "training_arguments.bin"))
 
-    return global_loss, best_dev_score
+    return global_loss, best_dev_loss
 
 
 # ------------
 # Evaluate
 # ------------
 
-def calculate_rouge_score(tokenizer, predicted_sequences, summaries, article_names):
+def compute_rouge_score(tokenizer, predicted_sequences, summaries, article_names):
     r = Rouge()
     results = defaultdict(dict)
-    hyps = [tokenizer.decode(seq.toList(), clean_up_tokenization_spaces=True, skip_special_tokens=True) for seq in predicted_sequences]
-    refs = [tokenizer.decode(summary.numpy().toList(), clean_up_tokenization_spaces=True, skip_special_tokens=True) for summary in summaries]
-    scores = r.get_scores(hyps, refs, avg=True) #avg=True to get mean values
-    logger.info("***** Rouge scores {} *****".format(scores))
-    for i, article in enumerate(article_names):
-        with open("summaries/{}_summary.txt".format(article), "w") as summary_file:
-            summary_file.write(" ".join(hyps[i]))
+
+    def _decode_seq(seq):
+        sent = tokenizer.decode(seq, clean_up_tokenization_spaces=True, skip_special_tokens=True)
+        sents = sent.split(".")
+        sent = " ".join([s + "." for s in sents])
+        return sent
+
+    hyps = []
+    refs = []
+    for (hyp, ref) in zip(predicted_sequences.tolist(), summaries.tolist()):
+        hyps.append(_decode_seq(hyp))
+        ref = [int(val) for val in ref]
+        refs.append(_decode_seq(ref))
+
+    # FIXME: ValueError when input empty or only one full stop
+    if hyps:
+        scores = r.get_scores(hyps, refs, avg=True) #avg=True to get mean values
+        logger.info("***** Rouge scores {} *****".format(scores))
+        for i, article in enumerate(article_names):
+            with open("summaries/{}_summary.txt".format(article), "w") as summary_file:
+                summary_file.write(" ".join(hyps[i]))
     return results
 
 def evaluate(args, model, tokenizer):
@@ -285,7 +297,7 @@ def evaluate(args, model, tokenizer):
 
     args.eval_batch_size = args.per_gpu_eval_batch_size * max(1, args.n_gpu)
     eval_dataset = load_and_cache_examples("dev", tokenizer)
-    model_collate_fn = functools.partial(collate, tokenizer=tokenizer, max_seqlen=args.max_seqlen, case=args.case, sum_len=args.sum_len, predict_pos=0)
+    model_collate_fn = functools.partial(collate, tokenizer=tokenizer, max_seqlen=args.max_seqlen, mode="eval", sum_len=args.sum_len, predict_pos=0)
 
     eval_sampler = SequentialSampler(eval_dataset)
     eval_dataloader = DataLoader(
@@ -296,7 +308,7 @@ def evaluate(args, model, tokenizer):
     if args.n_gpu > 1:
         model = torch.nn.DataParallel(model)
 
-    logger.info("***** Running evaluation {} *****")
+    logger.info("***** Running evaluation *****")
     logger.info("  Num examples = %d", len(eval_dataset))
     logger.info("  Batch size = %d", args.eval_batch_size)
 
@@ -310,12 +322,15 @@ def evaluate(args, model, tokenizer):
     for batch in tqdm(eval_dataloader, desc="Evaluating"):
 
         input_ids, stories, summaries, attention_mask, perm_mask, target_mapping, article_names = batch
-        predicted_sequence = torch.zeros((input_ids.shape[0], args.sum_len))
+
+        predicted_sequence = torch.zeros((input_ids.shape[0], args.sum_len), dtype=torch.int32)
         seq_loss = 0.0
 
         for predict_pos in range(args.sum_len):
             if predict_pos > 0:
-                target_mapping = build_target_mapping(seq_len=input_ids.shape[1], predict_pos=predict_pos)
+                target_mapping = torch.cat([build_target_mapping(seq_len=input_ids.shape[1], predict_pos=predict_pos) for _ in range(input_ids.shape[0])], dim=0)
+
+
             input_ids = input_ids.to(args.device)
             target_mapping = target_mapping.to(args.device)
             perm_mask = perm_mask.to(args.device)
@@ -338,20 +353,21 @@ def evaluate(args, model, tokenizer):
                 # Output has shape [target_mapping.size(0), target_mapping.size(1), config.vocab_size]
                 next_token_logits = outputs[1]
 
-                _, predicted_indices = torch.max(next_token_logits[0].view(2, -1), dim=1, keepdim=True)
+                _, predicted_indices = torch.max(next_token_logits[0].view(input_ids.shape[0], -1), dim=1, keepdim=True)
 
-                for i in range(len(predicted_indices)):
-                    predicted_sequence[i, predict_pos] = predicted_indices[i].item()
+                for i in range(predicted_indices.shape[0]):
+                    predicted_sequence[i, predict_pos] = int(predicted_indices[i].item())
 
                     # replace prediction in input
                     input_ids[i, predict_pos] = predicted_indices[i].item()
 
         eval_loss += seq_loss/args.sum_len
 
-        rouge_score.append(calculate_rouge_score(tokenizer, predicted_sequence, summaries, article_names))
+        #rouge_score.append(compute_rouge_score(tokenizer, predicted_sequence, summaries, article_names))
         nb_eval_steps += 1
 
     eval_loss = eval_loss / nb_eval_steps
+    '''
     rouge_dict = {rouge_type: {key: 0 for key in ['f', 'p', 'r']} for rouge_type in ['rouge-1', 'rouge-2', 'rouge-l']}
     for batch in rouge_score:
         for rouge_type, values in batch.items():
@@ -359,7 +375,7 @@ def evaluate(args, model, tokenizer):
                 rouge_dict[rouge_type][measure] += value
     rouge_dict = {rouge_type: {measure: value / len(rouge_score) for measure, value in values.items()} for
                   rouge_type, values in rouge_dict.items()}
-
+    '''
     # Save the evaluation's results
     output_eval_file = os.path.join(args.output_dir, "eval_results.txt")
     if not os.path.exists(args.output_dir):
@@ -368,11 +384,13 @@ def evaluate(args, model, tokenizer):
     with open(output_eval_file, "w") as writer:
         logger.info("***** Eval results *****")
         logger.info(" eval loss = %s", eval_loss)
-        for key in sorted(rouge_dict.keys()):
-            logger.info("  %s = %s", key, str(rouge_dict[key]))
-            writer.write("%s = %s\n" % (key, str(rouge_dict[key])))
+        #for key in sorted(rouge_dict.keys()):
+            #logger.info("  %s = %s", key, str(rouge_dict[key]))
+            #writer.write("%s = %s\n" % (key, str(rouge_dict[key])))
 
-    return eval_loss, rouge_dict
+
+    #return eval_loss, rouge_dict
+    return eval_loss
 
 
 def main():
@@ -521,8 +539,8 @@ def main():
     # Train the model
     model.to(args.device)
     if args.do_train:
-        global_loss, best_dev_score = train(args, model, tokenizer, args.case)
-        logger.info(" train loss history = %s, \n, dev loss history = %s, \n best rouge-1 f-score on dev set = %s", global_loss['train'], global_loss['dev'], best_dev_score)
+        global_loss, best_dev_loss = train(args, model, tokenizer, args.case)
+        logger.info(" train loss history = %s, \n, dev loss history = %s, \n best loss on dev set = %s", global_loss['train'], global_loss['dev'], best_dev_loss)
 
         if not os.path.exists(args.output_dir):
             os.makedirs(args.output_dir)
