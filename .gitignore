@@ -104,11 +104,7 @@ venv.bak/
 .mypy_cache/
 
 # data files
-data/
 .idea/
 logs/
 summaries/
-stories/
-testing/
-train.py
-utils.py
+data/

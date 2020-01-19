@@ -33,13 +33,14 @@ class CNNDailyMailDataset(Dataset):
         self.stories_path = []
         datasets = ("dailymail", "cnn")
         for dataset in datasets:
-            path_to_stories = os.path.join(data_dir, dataset, "stories")
-            story_filenames_list = os.listdir(path_to_stories)
-            for story_filename in story_filenames_list:
-                path_to_story = os.path.join(path_to_stories, story_filename)
-                if not os.path.isfile(path_to_story):
-                    continue
-                self.stories_path.append(path_to_story)
+            if os.path.exists(os.path.join(data_dir, dataset)):
+                path_to_stories = os.path.join(data_dir, dataset, "stories")
+                story_filenames_list = os.listdir(path_to_stories)
+                for story_filename in story_filenames_list:
+                    path_to_story = os.path.join(path_to_stories, story_filename)
+                    if not os.path.isfile(path_to_story):
+                        continue
+                    self.stories_path.append(path_to_story)
 
     def __len__(self):
         return len(self.stories_path)
@@ -47,6 +48,8 @@ class CNNDailyMailDataset(Dataset):
     def __getitem__(self, idx):
         story_path = self.stories_path[idx]
         story_name = re.match(r"(^.*\/)(.*)(\..*$)", story_path).group(2)
+        story_dir = re.match(r".*data.*\/(.*)\/stories", story_path).group(1)
+        story_name = story_dir + "_" + story_name
         with open(story_path, encoding="utf-8") as source:
             raw_story = source.read()
             story_lines, summary_lines = process_story(raw_story)
@@ -152,14 +155,9 @@ def build_attention_mask(seq_len, max_seq_len):
     return mask
 
 
-def pad_target_mapping(mode, sum_lens, case, pad_sum_len, max_seqlen, predict_pos):
+def pad_target_mapping(mode, sum_lens, max_seqlen, predict_pos):
     if mode == "train":
-        if case == 1:
-            target_mappings = torch.cat(
-                [build_target_mapping(max_seqlen, pad_sum_len=pad_sum_len, sum_len=sum_len) for
-                 sum_len in sum_lens], dim=0)
-        if case == 2:
-            target_mappings = torch.zeros((len(sum_lens)))
+        target_mappings = torch.zeros((len(sum_lens)))
 
     if mode == "eval":
         target_mappings = torch.cat(
@@ -169,12 +167,9 @@ def pad_target_mapping(mode, sum_lens, case, pad_sum_len, max_seqlen, predict_po
     return target_mappings
 
 
-def pad_summaries_ids(mode, summaries_ids, case, pad_sum_len, max_seqlen, sum_len):
+def pad_summaries_ids(mode, summaries_ids, max_seqlen, sum_len):
     if mode == "train":
-        if case == 1:
-            summaries_ids = torch.cat([pad_summary(summary, pad_sum_len) for summary in summaries_ids], dim=0)
-        if case == 2:
-            summaries_ids = torch.cat([pad_summary(summary, max_seqlen) for summary in summaries_ids], dim=0)
+        summaries_ids = torch.cat([pad_summary(summary, max_seqlen) for summary in summaries_ids], dim=0)
 
     if mode == "eval":
         summaries = torch.zeros((len(summaries_ids), sum_len))
@@ -183,11 +178,12 @@ def pad_summaries_ids(mode, summaries_ids, case, pad_sum_len, max_seqlen, sum_le
                 summary = summary[:, :sum_len]
             else:
                 pad_len = sum_len - summary.shape[1]
-                pad = torch.tensor([-1] * pad_len).unsqueeze(0)
+                pad = torch.tensor([-1.0] * pad_len, dtype=torch.float64).unsqueeze(0)
                 summary = torch.cat([summary, pad], dim=1)
             summaries[i] = summary
         summaries_ids = summaries
     return summaries_ids
+
 
 def pad_summary(tokens, pad_seqlen):
     if pad_seqlen > tokens.shape[1]:
@@ -197,17 +193,14 @@ def pad_summary(tokens, pad_seqlen):
         tokens = tokens[:pad_seqlen]
     return tokens
 
-def encode_for_summarization(mode, story_lines, summary_lines, story_name, tokenizer, max_seqlen, sum_len = None):
+
+def encode_for_summarization(mode, story_lines, summary_lines, tokenizer, max_seqlen, sum_len = None):
     """ Encode the story and summary lines, and join them
     as specified in [1] by using `[SEP] [CLS]` tokens to separate
     sentences.
     """
     story = " ".join(story_lines)
-    with open("stories/{}_story.txt".format(story_name), "w") as story_file:
-        story_file.write(story)
     summary = " ".join(summary_lines)
-    with open("summaries/{}_summary.txt".format(story_name), "w") as summary_file:
-        summary_file.write(story)
 
     assert tokenizer.mask_token == "<mask>"
 
@@ -227,18 +220,18 @@ def encode_for_summarization(mode, story_lines, summary_lines, story_name, token
         story_token_ids = tokenizer.encode(story, add_special_tokens=False)
         input_ids = summary_token_ids + story_token_ids + tokenizer.encode("<sep> <cls>")
 
-
     def _pad_input(tokens, max_seqlen, tokenizer):
         if max_seqlen > len(tokens):
             pad_token_id = tokenizer.encode(tokenizer.pad_token)
-            padding = pad_token_id *(max_seqlen-len(tokens))
+            padding = pad_token_id * (max_seqlen-len(tokens))
             tokens += padding
         else:
-            tokens = tokens[:max_seqlen]
+            tokens = tokens[:max_seqlen-2]
+            tokens += tokenizer.encode("<sep> <cls>")
         return tokens
 
     input_ids = torch.tensor(_pad_input(input_ids, max_seqlen, tokenizer)).unsqueeze(0)
-    summary_token_ids = torch.tensor(summary_token_ids).unsqueeze(0)
+    summary_token_ids = torch.tensor(summary_token_ids, dtype=torch.float64).unsqueeze(0)
     story_token_ids = torch.tensor(story_token_ids).unsqueeze(0)
     return input_ids, story_token_ids, summary_token_ids, sum_len
 
@@ -247,4 +240,4 @@ if __name__ == "__main__":
     tokenizer = XLNetTokenizer.from_pretrained('xlnet-large-cased')
     test = CNNDailyMailDataset(tokenizer, data_dir="testing")
     test_path = test.stories_path[0]
-    print(encode_for_summarization(test[0][0], test[0][1], test_path, tokenizer, sum_len = 10))
+    print(encode_for_summarization(tokenizer, test[0][1], test[0][2], test[0][0], tokenizer, max_seqlen = 2500, sum_len = 10))
