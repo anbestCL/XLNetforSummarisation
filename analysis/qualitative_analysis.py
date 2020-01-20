@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import pickle
 import operator
 
@@ -5,55 +7,87 @@ import matplotlib.pyplot as plt; plt.rcdefaults()
 import numpy as np
 import matplotlib.pyplot as plt
 
-with open("scoring/scores/rouge_scores_dev_lead.bin", "rb") as score_file:
-    rouge_scores_dev_lead = pickle.load(score_file)
 
-with open("scoring/scores/rouge_scores_dev_wo_pen.bin", "rb") as score_file:
-    rouge_scores_dev_wo_pen = pickle.load(score_file)
+def load_scores(split):
+    """Loading dictionaries containing rouge scores for individual articles.
 
-with open("scoring/scores/rouge_scores_dev_w_pen.bin", "rb") as score_file:
-    rouge_scores_dev_w_pen = pickle.load(score_file)
+    Scores are F-scores for ROUGE-1, ROUGE-2 and ROUGE-L, computed between reference summary and
+        - lead (article beginning),
+        - with penalty and
+        - without penalty
+    settings for each article of the selected data split.
 
-diff_w_wo_pen = {}
-for name, (value1, _, _) in rouge_scores_dev_w_pen.items():
-    diff = value1 - rouge_scores_dev_wo_pen[name][0]
-    diff_w_wo_pen[name] = diff*100
+    Args:
+        split (str): data split for which scores have been computed; either dev or test
 
-max_name, max_diff = max(diff_w_wo_pen.items(), key=operator.itemgetter(1))
-print(max_name, max_diff)
-min_name, min_diff = min(diff_w_wo_pen.items(), key=operator.itemgetter(1))
-print(min_name, min_diff)
+    Returns:
+        rouge_scores_lead (dict): contains F-scores for ROUGE-1, ROUGE-2 and ROUGE-L computed between
+            lead (article beginning) and reference summary for each article
+        rouge_scores_wo_pen (dict): contains F-scores for ROUGE-1, ROUGE-2 and ROUGE-L computed between
+            summaries generated without penalty and reference summary for each article
+        rouge_scores_w_pen (dict): contains F-scores for ROUGE-1, ROUGE-2 and ROUGE-L computed between
+            summaries generated with penalty and reference summary for each article
 
-objects = sorted(list(diff_w_wo_pen.values()))
-y_pos = np.arange(len(objects))
-plt.bar(y_pos, objects, align='center', alpha=0.5)
-plt.title("Diifferences between ROUGE-1 F-scores with and without penalty")
-plt.ylabel("Differences in % points")
-plt.xlabel("Articles")
-plt.savefig("scoring/plots/diff_dev_w_wo_pen")
+    """
+    with open("analysis/scores/rouge_scores_{}_lead.bin".format(split), "rb") as score_file:
+        rouge_scores_lead = pickle.load(score_file)
 
-diff_wo_pen_lead = {}
-for name, (value1, _, _) in rouge_scores_dev_wo_pen.items():
-    diff = value1 - rouge_scores_dev_lead[name][0]
-    diff_wo_pen_lead[name] = diff
+    with open("analysis/scores/rouge_scores_{}_wo_pen.bin".format(split), "rb") as score_file:
+        rouge_scores_wo_pen = pickle.load(score_file)
 
-max_name, max_diff = max(diff_wo_pen_lead.items(), key=operator.itemgetter(1))
-print(max_name, max_diff)
-print(rouge_scores_dev_wo_pen[max_name])
-min_name, min_diff = min(diff_wo_pen_lead.items(), key=operator.itemgetter(1))
-print(min_name, min_diff)
-print(rouge_scores_dev_wo_pen[min_name])
+    with open("analysis/scores/rouge_scores_{}_w_pen.bin".format(split), "rb") as score_file:
+        rouge_scores_w_pen = pickle.load(score_file)
+
+    return rouge_scores_lead, rouge_scores_wo_pen, rouge_scores_w_pen
 
 
-diff_w_pen_lead = {}
-for name, (value1, _, _) in rouge_scores_dev_w_pen.items():
-    diff = value1 - rouge_scores_dev_lead[name][0]
-    diff_w_pen_lead[name] = diff
+def compute_and_plot_differences(score_name, scores1, scores2, scores1_name, scores2_name, filename):
+    """Computes and plots article-based differences between ROUGE scores of two settings
 
-max_name, max_diff = max(diff_w_pen_lead.items(), key=operator.itemgetter(1))
-print(max_name, max_diff)
-min_name, min_diff = min(diff_w_pen_lead.items(), key=operator.itemgetter(1))
-print(min_name, min_diff)
+    Args:
+        score_name (str): type of score for which difference is supposed to be computed; rouge-1, rouge-2 or rouge-l
+        scores1 (dict): contains ROUGE F-scores for each article of one setting
+        scores2 (dict): contains ROUGE F-scores for each article of second setting
+        scores1_name (str): setting of scores1
+        scores2_name (str): setting of scores2
+        filename (str): path to save plot to
+
+    """
+    if score_name == "rouge-1":
+        pos = 0
+    elif score_name == "rouge-2":
+        pos = 1
+    elif score_name == "rouge-l":
+        pos = 2
+    differences = {}
+    for name, (value1, _, _) in scores1.items():
+        diff = value1 - scores2[name][pos]
+        differences[name] = diff*100
+
+    max_name, max_diff = max(differences.items(), key=operator.itemgetter(1))
+    print("Most benefit for article {} with difference {}".format(max_name, max_diff))
+    min_name, min_diff = min(differences.items(), key=operator.itemgetter(1))
+    print("Least benefit for article {} with difference {}".format(min_name, min_diff))
+
+    objects = np.array(sorted(list(differences.values())))
+    y_pos = np.arange(len(objects))
+    neg = objects < 0
+    pos = objects >= 0
+    plt.bar(y_pos[neg], objects[neg], align='center', alpha=0.5, color='red')
+    plt.bar(y_pos[pos], objects[pos], align='center', alpha=0.5, color='green')
+    plt.title("Diifferences between {} F-scores {} and {}".format(score_name.upper(), scores1_name, scores2_name))
+    plt.ylabel("Differences in % points")
+    plt.xlabel("Articles")
+    plt.savefig(filename)
+    plt.clf()
+
+
+for split in ["dev", "test"]:
+    lead, wo_pen, w_pen = load_scores(split)
+    compute_and_plot_differences('rouge-1', w_pen, wo_pen, "with", "without penalty", "analysis/plots/distribution_{}_w_wo_pen".format(split))
+    compute_and_plot_differences('rouge-1',wo_pen, lead, "without penalty", "lead",
+                                 "analysis/plots/distribution_{}_wo_pen_lead".format(split))
+    compute_and_plot_differences('rouge-1', w_pen, lead, "with penalty", "lead", "analysis/plots/distribution_{}_w_pen_lead".format(split))
 
 
 
