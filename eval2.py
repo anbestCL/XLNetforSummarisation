@@ -129,17 +129,13 @@ def evaluate(args, model, tokenizer):
                     target_mapping=target_mapping,
                 )
 
-            # Output has shape [batch_size, 1 , config.vocab_size], 1 stands for the number of tokens to be predicted
+            # Output has shape [target_mapping.size(0), target_mapping.size(1), config.vocab_size]
             next_token_logits = outputs[0]
-            # slightly modified repetition penalty from CTRL paper (https://arxiv.org/abs/1909.05858)
-            if args.repetition_penalty != 1.0:
+
+            if args.repetition_penalty != 0.0:
                 for i in range(input_ids.shape[0]):
                     for previous_tokens in set(input_ids[i].tolist()[:predict_pos]):
-                        # if score < 0 then repetition penalty has to multiplied to reduce the previous token probability
-                        if next_token_logits[i, 0, previous_tokens] < 0:
-                            next_token_logits[i, 0, previous_tokens] *= args.repetition_penalty
-                        else:
-                            next_token_logits[i, 0, previous_tokens] /= args.repetition_penalty
+                        next_token_logits[i, 0, previous_tokens] -= args.repetition_penalty
             _, predicted_indices = torch.max(next_token_logits.view(input_ids.shape[0], -1), dim=1, keepdim=True)
 
             for i in range(predicted_indices.shape[0]):
@@ -152,7 +148,7 @@ def evaluate(args, model, tokenizer):
             seq_decoded = tokenizer.decode(seq, clean_up_tokenization_spaces=True, skip_special_tokens=True)
             logger.info("***** Writing prediction for article {}".format(article_names[i]))
             chunk = re.match(r".*_data_(.*)", args.data_dir).group(1)
-            path = os.path.join("test_summaries_{}_wo_penalty".format(chunk), "{}_generated.txt".format(article_names[i]))
+            path = os.path.join("dev_summaries_{}_wo_penalty2".format(chunk), "{}_generated.txt".format(article_names[i]))
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, "w") as summary_file:
                 summary_file.write(seq_decoded)

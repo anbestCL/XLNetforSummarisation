@@ -1,0 +1,33 @@
+Difference between with and without penalty
+Dictionary with 3 highest values:
+Articles: Values
+dailymail_1a0cb94420e0e1ce99d2e67607175aa067d2adae  : 54.22764227642276
+dailymail_76f3f120cf62c5fc7a0cd0c95d3245775e41834a  : 52.64847512038523
+dailymail_3bb5c44400b711cb49c9e0ad025ae674a81ea43f  : 51.11228813559322
+Dictionary with 3 lowest values:
+Articles: Values
+dailymail_eaeaab1f32b0bd58ccbadc269331da95a227b77a  : -47.66853548475318
+dailymail_121fd3cf9ce903f515797dc1a9e7ffe03daf5820  : -40.24279994834043
+dailymail_0d593c3807c979dfd4b0a0a380ce911e9e07e2f4  : -39.92901508429459
+Difference between lead and without penalty
+Dictionary with 3 highest values:
+Articles: Values
+dailymail_13677f5d0d1e34a093a444158ddefb8248a0fea0  : 43.90844560336086
+dailymail_692781308ebf134e5e2aaac2ced718d0bba6bada  : 43.18518518518517
+dailymail_c0ce1548acf5796edd1c251815273358f16d438e  : 36.65277473130072
+Dictionary with 3 lowest values:
+Articles: Values
+dailymail_4358634a59d0aad941da3d9997650d40665f6d79  : -97.77777777777777
+dailymail_093b975f7dffb6040ffee0729233f473de0f82db  : -96.875
+dailymail_8fbee4db6fc56a137a2b87991337d8fa066817dc  : -95.40320462306278
+Difference between lead and with penalty
+Dictionary with 3 highest values:
+Articles: Values
+dailymail_3bb5c44400b711cb49c9e0ad025ae674a81ea43f  : 50.39113428943938
+dailymail_692781308ebf134e5e2aaac2ced718d0bba6bada  : 42.61092775944262
+dailymail_64c48d1888ed32f5adc887275a87a488f5a5fcc8  : 39.084967320261434
+Dictionary with 3 lowest values:
+Articles: Values
+dailymail_093b975f7dffb6040ffee0729233f473de0f82db  : -100.0
+dailymail_4358634a59d0aad941da3d9997650d40665f6d79  : -97.77777777777777
+dailymail_8fbee4db6fc56a137a2b87991337d8fa066817dc  : -88.98345153664302

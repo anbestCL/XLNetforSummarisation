@@ -2,6 +2,7 @@
 
 import pickle
 import operator
+from collections import Counter
 
 import matplotlib.pyplot as plt; plt.rcdefaults()
 import numpy as np
@@ -64,10 +65,18 @@ def compute_and_plot_differences(score_name, scores1, scores2, scores1_name, sco
         diff = value1 - scores2[name][pos]
         differences[name] = diff*100
 
-    max_name, max_diff = max(differences.items(), key=operator.itemgetter(1))
-    print("Most benefit for article {} with difference {}".format(max_name, max_diff))
-    min_name, min_diff = min(differences.items(), key=operator.itemgetter(1))
-    print("Least benefit for article {} with difference {}".format(min_name, min_diff))
+    differences = Counter(differences)
+    high = differences.most_common(3)
+    print("Dictionary with 3 highest values:")
+    print("Articles: Values")
+    for i in high:
+        print(i[0], " :", i[1], " ")
+
+    low = differences.most_common()[:-4:-1]
+    print("Dictionary with 3 lowest values:")
+    print("Articles: Values")
+    for i in low:
+        print(i[0], " :", i[1], " ")
 
     objects = np.array(sorted(list(differences.values())))
     y_pos = np.arange(len(objects))
@@ -84,9 +93,12 @@ def compute_and_plot_differences(score_name, scores1, scores2, scores1_name, sco
 
 for split in ["dev", "test"]:
     lead, wo_pen, w_pen = load_scores(split)
+    print("Difference between with and without penalty")
     compute_and_plot_differences('rouge-1', w_pen, wo_pen, "with", "without penalty", "analysis/plots/distribution_{}_w_wo_pen".format(split))
+    print("Difference between lead and without penalty")
     compute_and_plot_differences('rouge-1',wo_pen, lead, "without penalty", "lead",
                                  "analysis/plots/distribution_{}_wo_pen_lead".format(split))
+    print("Difference between lead and with penalty")
     compute_and_plot_differences('rouge-1', w_pen, lead, "with penalty", "lead", "analysis/plots/distribution_{}_w_pen_lead".format(split))
 
 

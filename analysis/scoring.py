@@ -112,6 +112,22 @@ mode = "w_penalty"
 hyps_w_pen = load_sequences(args.summaries_folder_pref, args.chunks, mode)
 scores_w_pen = compute_rouge_score(hyps_w_pen, refs, "analysis/scores/rouge_scores_{}_w_pen.bin".format(datset))
 
+
+"""
+mode = "w_penalty2"
+hyps_w_pen2 = load_sequences(args.summaries_folder_pref, args.chunks, mode)
+scores_w_pen2 = compute_rouge_score(hyps_w_pen2, refs, "analysis/scores/rouge_scores_{}_w_pen2.bin".format(datset))
+
+avg_rouge_1 = sum([rouge_1 for name, (rouge_1, _, _) in scores_w_pen2.items()])/len(scores_w_pen2)
+avg_rouge_2 = sum([rouge_2 for name, (_, rouge_2, _) in scores_w_pen2.items()])/len(scores_w_pen2)
+avg_rouge_l = sum([rouge_l for name, (_, _, rouge_l) in scores_w_pen2.items()])/len(scores_w_pen2)
+print("Average ROUGE-1 score on {} set: {} \n"
+      "Average ROUGE-2 score on {} set: {} \n"
+      "Average ROUGE-L score on {} set: {} \n"
+      .format(datset, avg_rouge_1, datset, avg_rouge_2, datset, avg_rouge_l))
+"""
+
+
 for scores, setting in zip([scores_lead, scores_wo_pen, scores_w_pen], ["lead", "without penalty", "with penalty"]):
     avg_rouge_1 = sum([rouge_1 for name, (rouge_1, _, _) in scores.items()])/len(scores)
     avg_rouge_2 = sum([rouge_2 for name, (_, rouge_2, _) in scores.items()])/len(scores)
@@ -120,4 +136,3 @@ for scores, setting in zip([scores_lead, scores_wo_pen, scores_w_pen], ["lead", 
           "Average ROUGE-2 score on {} set: {} \n"
           "Average ROUGE-L score on {} set: {} \n"
           .format(datset, avg_rouge_1, datset, avg_rouge_2, datset, avg_rouge_l))
-
