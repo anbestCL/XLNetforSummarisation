@@ -70,7 +70,7 @@ def plot_distribution(lengths_cnn, lengths_dm, dataset, text):
     axs[0].set_title("Distribution of {} lengths in {} dataset".format(text, dataset))
 
     hist, bins, _ = axs[0].hist(lengths_dm, bins=50, alpha=0.75, facecolor='blue', edgecolor='black', linewidth=1.2,
-                label='Dailymail {}'.format(text))
+                label='DailyMail {}'.format(text))
     axs[0].set_ylabel("{} count".format(text))
     axs[0].legend()
 
@@ -79,11 +79,11 @@ def plot_distribution(lengths_cnn, lengths_dm, dataset, text):
     axs[1].legend()
 
     lengths = lengths_cnn + lengths_dm
-    axs[2].hist(lengths, bins=bins, alpha=0.75, facecolor='red', edgecolor='black', linewidth=1.2, label="CNN + Dailymail {}".format(text))
+    axs[2].hist(lengths, bins=bins, alpha=0.75, facecolor='red', edgecolor='black', linewidth=1.2, label="CNN + DailyMail {}".format(text))
     axs[2].set_xlabel("Token count")
     axs[2].set_ylabel("{} count".format(text))
     axs[2].legend()
-    plt.savefig('descriptives/plots/{}_{}_distribution'.format(dataset, text))
+    plt.savefig('../descriptives/plots/{}_{}_distribution'.format(dataset, text))
 
 
 def compute_average(avg1, len1, avg2, len2):
@@ -92,10 +92,10 @@ def compute_average(avg1, len1, avg2, len2):
 
 for datset in ["train", "dev", "test"]:
     for origin in ["cnn", "dailymail"]:
-        filename_cnn = "descriptives/param_files/descriptives_{}_{}.p".format(origin, datset)
+        filename_cnn = "../descriptives/param_files/descriptives_{}_{}.p".format(origin, datset)
         story_lengths_cnn, avg_story_cnn, summary_lengths_cnn, avg_summary_cnn = get_stats(filename_cnn)
 
-        filename_dm = "descriptives/param_files/descriptives_dailymail_dev.p"
+        filename_dm = "../descriptives/param_files/descriptives_dailymail_dev.p"
         story_lengths_dm, avg_story_dm, summary_lengths_dm, avg_summary_dm = get_stats(filename_dm)
 
         origin = re.match(r".*\/param_files\/descriptives_(.*)_(.*).p", filename_cnn).group(2).upper()
