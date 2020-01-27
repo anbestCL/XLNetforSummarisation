@@ -1,6 +1,6 @@
 # XLNet for Summarisation
 
-This repository contains code of the master thesis "Evaluation of a Pretrained Language Model for Abstractive Summarization".
+This repository contains code of the master thesis [Summarization of Texts using a Pretrained Language Model](Steinberg_MA.pdf).
 
 ## Abstract
 
