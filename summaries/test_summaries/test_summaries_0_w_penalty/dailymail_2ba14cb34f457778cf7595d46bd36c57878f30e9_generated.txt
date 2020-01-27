@@ -1,0 +1,1 @@
+. The Smart TV's security team has discovered a way to penetrate Samsung's Smart TV's security system. The researchers have found a way to crack the TV's security system. 'The secret is that it can be used by hackers to access its settings.' Vulnerable: 'Yes,

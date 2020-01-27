@@ -1,0 +1,1 @@
+A massive security flaw that could lethackers listen in on private calls and read text messages has been revealed. The flaw, which is built into the global network that allows the world's cellular carriers to route calls and texts to each other. The flaws discovered by the German researchers are actually functions built into SS7 for other purposes – such as monitoring. But

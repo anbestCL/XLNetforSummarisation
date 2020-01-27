@@ -1,0 +1,1 @@
+. Twitter2GIS is a mobile app for social media users. It uses geo-tagged data to map their location. The application's API and Google's Geocoding API are used to generate heat maps of tweets. This information can be gleaned from ambient information or direct sharing. Many social

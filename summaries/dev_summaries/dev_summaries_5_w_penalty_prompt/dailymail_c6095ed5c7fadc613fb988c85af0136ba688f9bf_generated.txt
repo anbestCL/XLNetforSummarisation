@@ -1,0 +1,1 @@
+It can tell you what you wantin the blink of an eye, simply by tracking the movement of your retina. The menu identifies the perfect pizza based on which ingredients the user has been looking at the longest. The software then detects the gaze of the user by changing the logos on the interface from big to small. The software then detects the menu

@@ -1,0 +1,1 @@
+. The first two images of the face were taken by Google. The third was taken by Facebook's DB. The fourth was taken by Google's 'FaceNet'. The fifth was taken by Google's 'Face' DB. The sixth was taken by Google's 'Face'

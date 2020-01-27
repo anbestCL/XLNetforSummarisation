@@ -1,0 +1,1 @@
+. The IBM Watson Mobile Developer Challenge is a new feature of the IBM Watson software platform. It will be based on the IBM Watson supercomputer Watson. The new feature will include: 'Ask Watson'. The IBM Watson Mobile Developer Challenge is a new feature of the IBM Watson software platform. In this new feature

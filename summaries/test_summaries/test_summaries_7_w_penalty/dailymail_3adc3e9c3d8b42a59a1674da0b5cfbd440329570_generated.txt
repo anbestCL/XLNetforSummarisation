@@ -1,0 +1,1 @@
+. The Lernstift is a digital pen that can check for spelling mistakes in handwriting. The computer inside the Lernstift is an embedded Linux system - a scaled-down version seen on some computers and laptops, pictured. The battery inside the Lernstift is an embedded Linux system, said

@@ -1,0 +1,1 @@
+. 'The elephant is a little bit of an animal.' 'It's not that big, but it's very cute.' 'They're so happy to be together.' 'They're just so excited!' 'They're so happy to be together!'

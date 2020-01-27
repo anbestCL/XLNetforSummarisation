@@ -1,0 +1,1 @@
+. The first two images of the face were taken by Google's FaceNet software. 'The second image was taken by Facebook's FaceNet software. 'The third image was taken by Google's FaceNet software. 'The fourth image was taken by Google's FaceNet software. '

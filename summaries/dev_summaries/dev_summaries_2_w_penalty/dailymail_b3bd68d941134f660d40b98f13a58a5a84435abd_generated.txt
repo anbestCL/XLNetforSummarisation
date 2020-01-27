@@ -1,0 +1,1 @@
+. The robo-plough is a snowy robot that can be operated from the sofa. It's designed to work in snow, and can be powered by two car batteries. The robot weighs about 400lbs, and can run for two hours on two cars batteries. If you're looking for fun

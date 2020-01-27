@@ -1,0 +1,1 @@
+. 'He was a lion.' 'The robbers were armed with a gun.' 'They were armed with a jackal.' 'They were armed with a gun.' |. '. '. '. '. '. '. '

@@ -1,0 +1,1 @@
+. Tickle app concept is a concept. It uses an iPhone's built-in accelerometer to detect movement. The app is designed to be used to help you escape awkward situations. The Tickle app concept uses an iPhone's built-in accelerometer to detect movement. Scroll down for video

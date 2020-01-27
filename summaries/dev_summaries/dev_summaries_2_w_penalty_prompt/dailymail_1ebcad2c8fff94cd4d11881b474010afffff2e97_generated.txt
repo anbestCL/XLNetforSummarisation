@@ -1,0 +1,1 @@
+You might think twice before allowing amobile app to have access to your location data. But it’s not just apps that need to worry about – hackers can now track our every move through our phone's power consumption. The researchers claim that power data is free to any application. It’s not just apps that need to worry about – many

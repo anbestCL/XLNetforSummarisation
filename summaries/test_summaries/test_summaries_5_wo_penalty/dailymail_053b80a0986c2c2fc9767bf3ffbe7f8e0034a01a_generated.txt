@@ -1,0 +1,1 @@
+mobile payments service. Google's Android Pay is a free mobile payment and digital wallet that securely stores a user's credit cards, debit cards and offers. It will also allow companies to add tap-to-pay options in high-street stores. It will also allow firms to add mobile payments to apps.

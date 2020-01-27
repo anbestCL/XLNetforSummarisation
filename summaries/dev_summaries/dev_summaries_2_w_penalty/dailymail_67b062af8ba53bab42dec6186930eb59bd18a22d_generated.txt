@@ -1,0 +1,1 @@
+. The security flaws in the system are not yet fully revealed, the researchers say. The flaw is in a global telecom network called Signal System 7 that helps phone carriers across the world, including AT&T and Verizon, route calls and texts to each other. However, hackers worked out a way to repurpose the features

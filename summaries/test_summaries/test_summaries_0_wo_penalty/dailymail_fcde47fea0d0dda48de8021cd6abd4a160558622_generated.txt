@@ -1,0 +1,1 @@
+. "The police were not able to arrest the robbers. They were able to arrest the police." "The police were able to arrest the robbers." "The police were able to arrest the robbers." "The police were able to arrest the robbers."

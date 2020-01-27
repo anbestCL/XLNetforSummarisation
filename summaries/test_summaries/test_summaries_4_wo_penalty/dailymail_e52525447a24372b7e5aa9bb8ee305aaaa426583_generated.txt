@@ -1,0 +1,1 @@
+, and the victim's Amazon account can be compromised. The vulnerability is known as Cross Site Scripting, or XSS. It is a common web application vulnerability that can be exploited by malicious code. The vulnerability is exposed when a user downloads a malicious e-book. The vulnerability is exposed when,

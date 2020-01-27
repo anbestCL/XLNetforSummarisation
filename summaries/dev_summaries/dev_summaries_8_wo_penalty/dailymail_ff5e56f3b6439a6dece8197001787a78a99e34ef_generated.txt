@@ -1,0 +1,1 @@
+. The IBM Watson Mobile Developer Challenge is a new feature of IBM's Watson. The new feature will be called Watson Question Answering (QA) machine. The feature will be called Watson Helpline. The feature will be called Watson Helpline. In February 2011 IBM announced that in a new feature, the

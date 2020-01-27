@@ -1,0 +1,1 @@
+. The Secret app is a secret-sharing app which allows people to post anonymous confessions online. It is also vulnerable and puts the identity of the users at risk. The app is designed by Secret, which has been revealed. Secret is an open source software application which allows people to post anonymous confessions, according to
