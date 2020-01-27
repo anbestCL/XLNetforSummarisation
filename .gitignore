@@ -110,5 +110,3 @@ data/
 
 # not finished files
 tpu/
-train_and_eval.py
-utils_summarisation.py

@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader, SequentialSampler
 
 from pytorch_transformers import XLNetTokenizer, XLNetLMHeadModel
 
-from utils_eval import CNNDailyMailDataset, \
+from eval_utils import CNNDailyMailDataset, \
     encode_for_summarization, build_attention_mask, build_perm_mask, build_target_mapping
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,11 @@ def collate(data, tokenizer, args):
         length of generated summary (sum_len)
 
     Returns:
-
+        input_ids: tensor containing input sequence (args.batch_size x args.max_seqlen)
+        attention_masks: tensor containing attention mask (args.batch_size x args.max_seqlen)
+        perm_masks: tensor containing permutation mask (args.batch_size x args.max_seqlen x args.max_seqlen)
+        target_mappings: tensor containing target mapping (args.batch_size x 1 x args.max_seqlen)
+        storynames: list with story names of batch
     """
 
     # remove the files with empty an story/summary

@@ -6,7 +6,7 @@ import re
 
 from pytorch_transformers import XLNetTokenizer
 
-from utils_summarisation import CNNDailyMailDataset
+from train_and_eval_utils import CNNDailyMailDataset
 
 
 def load_paths(filename):

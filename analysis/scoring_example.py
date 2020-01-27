@@ -1,4 +1,4 @@
-from utils_summarisation import CNNDailyMailDataset
+from train_and_eval_utils import CNNDailyMailDataset
 from pytorch_transformers import XLNetTokenizer
 
 best_list = [("1a0cb94420e0e1ce99d2e67607175aa067d2adae", "../data/dev_data0-9/dev_data_5"),

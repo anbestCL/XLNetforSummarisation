@@ -7,7 +7,7 @@ import pickle
 
 from pytorch_transformers import XLNetTokenizer
 from rouge_score import rouge_scorer
-from utils_summarisation import CNNDailyMailDataset
+from train_and_eval_utils import CNNDailyMailDataset
 
 
 def load_data(folder_prefix, chunks):
